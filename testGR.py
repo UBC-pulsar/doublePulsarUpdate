@@ -1,26 +1,35 @@
 #!/usr/bin/env python
+#
 # Author: Chiara M. F. Mingarelli, mingarelli@gmail.com.
+#
+# This code uses equations from the following papers:
+#
+#  * Kramer and Wex, Class. Quantum Grav. 26 (2009) 073001 (20pp). Often shortened to KW09.
+#                    doi:10.1088/0264-9381/26/7/073001
+#
+#  * Damour and Schafer, Nuovo Cimento B, Vol. 101B, Ser. 11, No. 2, p. 127 - 176 (1988).
+#                    doi:10.1007/BF02828697
+#
+#  * Kramer et al, Science, Volume 314, Issue 5796, pp. 97-102 (2006).
+#                    doi:10.1126/science.1132305
+#    Note that Kramer et al is used in reference to P_b dot, since KW09 has a typo for this value.
 
 import math
 import cmath
 import matplotlib.pyplot as plt
-from matplotlib import rc, text
-from matplotlib.font_manager import FontProperties
+from matplotlib import rc, text                      # to display latex 
+from matplotlib.font_manager import FontProperties   # to control size of text in figures
 import numpy as np
 import scipy.special as sp
-from scipy.integrate import quad, dblquad
-import sys #to enable command line m,l
-from sys import stdout 
-
 
 fontP = FontProperties()
 rc('text', usetex=True)
-plt.rcParams['font.size'] = 15
+plt.rcParams['font.size'] = 15                       # sets the font size for figuress
 
 sqrt=math.sqrt
 cos=math.cos
 sin=math.sin
-exp=cmath.exp # make sure to use cmath for complex exponents
+exp=cmath.exp                                        # make sure to use cmath for complex exponents
 pi=math.pi
 log=math.log
 atan=math.atan
@@ -35,7 +44,7 @@ def omega_dot(mp,mc,ecc,Pb):
     mp and mc have units of solar masses
     reproduces KW09 (This is Eq 10)
     """
-    ans=3*T_sun_KW09**(2./3)*(Pb/(2*pi))**(-5./3)*(mp+mc)**(2./3)/(1-ecc*ecc)
+    ans=3*T_sun**(2./3)*(Pb/(2*pi))**(-5./3)*(mp+mc)**(2./3)/(1-ecc*ecc)
     return ans
 
 def pb_dot(mp,mc,ecc,Pb):
@@ -44,24 +53,24 @@ def pb_dot(mp,mc,ecc,Pb):
     mp and mc have units of solar masses
     reproduces KW09 (This is Eq 14)
     """
-    pbdot=(-192.*pi/5)*(T_sun_KW09**(5./3))*((Pb/(2*pi))**(-5./3))*fe(ecc)*mp*mc/((mp+mc)**(1./3))
+    pbdot=(-192.*pi/5)*(T_sun**(5./3))*((Pb/(2*pi))**(-5./3))*fe(ecc)*mp*mc/((mp+mc)**(1./3))
     return pbdot
 
 def spinOrbit_p(mp,mc,ecc,Pb):
     """
-    Spin-orbit coupling of m_p.
-    mp and mc have units of solar masses
-    reproduces KW09 Table2 GR expected value for B.
-    This is Eq 15.
+    Spin-orbit coupling of m_p to orbital angular momentum.
+    mp and mc have units of solar masses.
+    This function reproduces the expected value for pulsar B (GR), in KW09 Table2.
+    This is Eq 15 in KW09.
     """
-    ans=T_sun_KW09**(2./3)*(2*pi/Pb)**(5./3)*mc*(4*mp+3*mc)/(2*(mp+mc)**(4./3)*(1.-ecc*ecc))
+    ans=T_sun**(2./3)*(2*pi/Pb)**(5./3)*mc*(4*mp+3*mc)/(2*(mp+mc)**(4./3)*(1.-ecc*ecc))
     return ans
 
 #Functions to update
 
 def M_tot(m1,m2):
     """
-    Total mass
+    Total mass, although measure total Ms are more precise.
     """
     ans=m1+m2
     return ans
@@ -87,13 +96,14 @@ def betaO(m1,m2,nb):
     ans=(G*M_tot(m1,m2)*nb)**(1./3)/c
     return ans
 
-def betaS(S_a,m_a):
+def betaS(P,m_a):
     """
-    Damour and Schafer 1988, Eq 5.20 p. 159, written in terms
-    of the spin parameter S_a.
+    Damour and Schafer 1988, Eq 5.20 p. 159, written as
+    a multiple of the neutron star moment of inertia I_A,
+    since this is not known. Answer should be interpreted as (ans)*I_A.
     """
-    #ans=c*S_a/(G*m_a*m_a)
-    ans=0.01
+    omega=2.*pi/P
+    ans=c*omega/(G*m_a*m_a) 
     return ans
 
 def fO(e_T,m1,m2):
@@ -115,7 +125,7 @@ def g_S(m1,m2,ecc,Sini,Cosi,K_0vec,kvec,svec):
 
 def g_S_parallel(m1,m2,ecc):
     """
-    From above, assuming k*s=1, i.e. is parallel.
+    From above, assuming k*s=1, i.e. k and s are parallel.
     This means that i=90 degrees and sin(i)=1, cos(i)=0.
     This can be used to estimate a limit on g_S.
     """
@@ -130,13 +140,16 @@ def k_tot(m1,m2,ecc,Sini,Cosi,nb,K_0vec,kvec,svec1,svec2,SpinA,SpinB):
     func=1.+fO(e_T,m1,m2)*betaO(m1,m2,nb)*betaO(m1,m2,nb)
     -g_S(m1,m2,ecc,sini,cosi,K_0vec,kvec,svec1)*betaO(m1,m2,nb)*betaS(Spin1,m1)
     -g_S(m1,m2,ecc,sini,cosi,K_0vec,kvec,svec2)*betaO(m1,m2,nb)*betaS(Spin2,m1)
-    return prefactor*func
+    ans=prefactor*func
+    return ans
 
 def omega_tot(eT):
     """
     total periastron advance w_tot= w_1PN+w_1.5PN+w_2PN
     """
-    ans=3*betaO()*betaO()*nb/(1-eT*eT)*(1+fO()*betaO()*betaO()-gS()*betaO()*betaS())
+    part1=3*betaO(m1,m2,nb)*betaO(m1,m2,nb)*nb/(1-eT*eT)
+    part2=(1+fO()*betaO()*betaO(m1,m2,nb)-gS()*betaO()*betaS())
+    ans=part1*part2 #separated function to avoid code over multiple lines
     return ans
 
 def fe(ecc):
@@ -149,25 +162,23 @@ def fe(ecc):
 if __name__ == "__main__":
     
     #Physical Constants
-    year = 86400*365.24218967 # seconds in a year 
-    c=2.99792458e8
-    G=6.67428e-11
-    s_mass_secs=G*(1.98892e30)/(c**3) #in seconds
-    M_sun=1.98892e30      # kilograms
-    T_sun= G*M_sun/c**3   # note, this yeilds 4.9267398258e-06, which differs from KW09
-                          # who claim T_sun=4.925490947e-06. This results in a 
-                          # fractional difference of 0.000253489901926 or ~0.025%
+    year = 86400*365.24218967   # seconds in a year 
+    c = 2.99792458e8            # speed of light [m/s]
+    G = 6.67428e-11             # Gravitational constant
+    T_sun = 4.925490947e-6      # G*M_sun/c^3   [seconds]
 
     #Constants from Kramer and Wex 09
     mc = 1.3381                 # mass of A [solar masses]
     mp = 1.2489                 # mass of B [solar masses]
+    
     Pb_day = 0.102251562485     # orbital period in units of days 0.102 251 562 48(5)
     Pb_sec = Pb_day*86400.      # converting days to seconds
-    ecc = 0.08777759            # 0.087 777 5(9)
+    ecc = 0.08777759            # eccentricity is 0.087 777 5(9). *How is this related to e_T?*
     M = 2.5870816               # total system mass 2.58708(16) [solar masses].
     nb = 2*pi/Pb_day            # orbital frequency, units of days
-    omegaDot_KW09 = 16.8994768  # advance of the periastron degrees/year 16.899 47(68)
-    T_sun_KW09 = 4.925490947e-6
+    omegaDot_KW09 = 16.8994768  # advance of the periastron 16.899 47(68) [degrees/year] 
+
+    #Published values from KW09/Kramer et al Science 2006
     Pb_dot = -1.25217e-12       # -1.252(17)e-12, from Kramer et al (2006), Science (typo in KW09).
     Pb_dot_GR = -1.24787e-12    # GR prediction from KW09 is 1.24787(13)
     SO_coupling = 5.07347       # GR prediction is 5.0734(7)
@@ -175,21 +186,21 @@ if __name__ == "__main__":
     Cosi=sqrt(1.-Sini*Sini)     # Trig formula applied
 
     #Testing Functions
+
     #K_0vec=np.array(1,0,0)
     #kvec=np.array(1,0,0)
     #svec1=np.array(1,0,0)
     #svec2=np.array(1,0,0)
-    SpinA=0.5
-    SpinB=0.5
 
-    #print "Omega dot diff is", "%.4e" %(omega_dot(mp,mc,ecc,Pb_sec)*year*180/pi - omegaDot_KW09), "degrees/year."
+
+    print "Omega dot diff is", "%.4e" %(omega_dot(mp,mc,ecc,Pb_sec)*year*180/pi - omegaDot_KW09), "degrees/year."
     #yields correct value up to 10^-4... still not great
                 
-    #print "Pb dot (GR) diff is", "%.4e" %(pb_dot(mp,mc,ecc,Pb_sec) - Pb_dot_GR)
+    print "Pb dot (GR) diff is", "%.4e" %(pb_dot(mp,mc,ecc,Pb_sec) - Pb_dot_GR)
     #yields correct value, diff is 10^-17 for GR prediction.
 
-    #print "SO coupling diff for B is", "%.4e" %  (spinOrbit_p(mp,mc,ecc,Pb_sec)*year*180/pi - SO_coupling), "degrees/year."
+    print "SO coupling diff for B is", "%.4e" %  (spinOrbit_p(mp,mc,ecc,Pb_sec)*year*180/pi - SO_coupling), "degrees/year."
 
     #print "testing k_total", k_tot(m1,m2,ecc,Sini,Cosi,nb,K_0vec,kvec,svec1,svec2,SpinA,SpinB)
 
-    print "testimating g_sA", g_S_parallel(mp,mc,ecc)
+    print "estimating g_sA", g_S_parallel(mp,mc,ecc)
