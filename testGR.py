@@ -41,8 +41,8 @@ j=complex(0,1)
 def omega_dot(mp,mc,ecc,Pb):
     """
     Advance of the periastron. Use Pb in seconds for consistent units.
-    mp and mc have units of solar masses
-    reproduces KW09 (This is Eq 10)
+    mp and mc have units of solar masses.
+    Reproduces KW09 (This is Eq 10).
     """
     ans=3*T_sun**(2./3)*(Pb/(2*pi))**(-5./3)*(mp+mc)**(2./3)/(1-ecc*ecc)
     return ans
@@ -143,12 +143,12 @@ def k_tot(m1,m2,ecc,Sini,Cosi,nb,K_0vec,kvec,svec1,svec2,SpinA,SpinB):
     ans=prefactor*func
     return ans
 
-def omega_tot(eT):
+def omega_tot(m1,m2,nb,eT):
     """
     total periastron advance w_tot= w_1PN+w_1.5PN+w_2PN
     """
     part1=3*betaO(m1,m2,nb)*betaO(m1,m2,nb)*nb/(1-eT*eT)
-    part2=(1+fO()*betaO()*betaO(m1,m2,nb)-gS()*betaO()*betaS())
+    part2=(1+fO(e_T,m1,m2)*betaO(m1,m2,nb)*betaO(m1,m2,nb)-gS()*betaO(m1,m2,nb)*betaS())
     ans=part1*part2 #separated function to avoid code over multiple lines
     return ans
 
@@ -169,21 +169,21 @@ if __name__ == "__main__":
 
     #Constants from Kramer and Wex 09
     mc = 1.3381                 # mass of A [solar masses]
-    mp = 1.2489                 # mass of B [solar masses]
-    
+    mp = 1.2489                 # mass of B [solar masses]    
     Pb_day = 0.102251562485     # orbital period in units of days 0.102 251 562 48(5)
     Pb_sec = Pb_day*86400.      # converting days to seconds
     ecc = 0.08777759            # eccentricity is 0.087 777 5(9). *How is this related to e_T?*
-    M = 2.5870816               # total system mass 2.58708(16) [solar masses].
-    nb = 2*pi/Pb_day            # orbital frequency, units of days
+    M = 2.5870816               # total double pulsar system mass 2.58708(16) [solar masses].
+    nb = 2*pi/Pb_sec            # orbital frequency, units of Hertz
     omegaDot_KW09 = 16.8994768  # advance of the periastron 16.899 47(68) [degrees/year] 
-
-    #Published values from KW09/Kramer et al Science 2006
-    Pb_dot = -1.25217e-12       # -1.252(17)e-12, from Kramer et al (2006), Science (typo in KW09).
     Pb_dot_GR = -1.24787e-12    # GR prediction from KW09 is 1.24787(13)
     SO_coupling = 5.07347       # GR prediction is 5.0734(7)
     Sini=0.99987                # GR prediction
     Cosi=sqrt(1.-Sini*Sini)     # Trig formula applied
+    
+    #Published values from Kramer et al Science 2006
+    Pb_dot = -1.25217e-12       # -1.252(17)e-12 
+
 
     #Testing Functions
 
@@ -192,7 +192,11 @@ if __name__ == "__main__":
     #svec1=np.array(1,0,0)
     #svec2=np.array(1,0,0)
 
-
+    print "\n **********************************************"
+    print " ***  TESTING VALUES FOR THE DOUBLE PULSAR  ***"
+    print " *** Code under development by C Mingarelli ***"
+    print " **********************************************\n"
+    
     print "Omega dot diff is", "%.4e" %(omega_dot(mp,mc,ecc,Pb_sec)*year*180/pi - omegaDot_KW09), "degrees/year."
     #yields correct value up to 10^-4... still not great
                 
@@ -201,6 +205,6 @@ if __name__ == "__main__":
 
     print "SO coupling diff for B is", "%.4e" %  (spinOrbit_p(mp,mc,ecc,Pb_sec)*year*180/pi - SO_coupling), "degrees/year."
 
-    #print "testing k_total", k_tot(m1,m2,ecc,Sini,Cosi,nb,K_0vec,kvec,svec1,svec2,SpinA,SpinB)
+    #print "testing k_total", k_tot(m1,m2,ecc,Sini,Cosi,nb,K_0vec,kvec,svec1,svec2)
 
     print "estimating g_sA", g_S_parallel(mp,mc,ecc)
